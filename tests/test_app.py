@@ -29,8 +29,27 @@ def test_blank_question_rejected():
     assert response.status_code == 422
 
 
-def test_unknown_crop_rejected():
+def test_crop_name_too_short_rejected():
+    response = client.post("/advise", json={**VALID, "crop": "P"})
+    assert response.status_code == 422
+
+
+def test_any_crop_name_is_accepted_and_reported_honestly_when_missing(monkeypatch):
+    # A crop outside the seed list is allowed; the market lookup then says no data was found.
+    import agent
+    monkeypatch.setattr(app_module, "advise", lambda *a, **k: {"advice": "x", "sources": [], "warnings": [], "trace": []})
     response = client.post("/advise", json={**VALID, "crop": "Wheat"})
+    assert response.status_code == 200
+
+
+def test_crops_endpoint_lists_seed_crops():
+    response = client.get("/crops")
+    assert response.status_code == 200
+    assert "Potato" in response.json()["crops"] and "Wheat" in response.json()["crops"]
+
+
+def test_locate_rejects_out_of_range_coordinates():
+    response = client.post("/locate", json={"latitude": 200, "longitude": 75})
     assert response.status_code == 422
 
 

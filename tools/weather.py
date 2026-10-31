@@ -2,37 +2,59 @@
 
 Two calls: a geocoding lookup turns a place name into coordinates,
 then the forecast endpoint returns daily rain and temperature for those coordinates.
+Forecasts are cached for 30 minutes; place lookups are cached for 30 days.
 """
 
 from datetime import datetime, timezone
 
 import requests
 
+from tools.cache import SourceDown, cached_fetch
+from tools.places import parse_coordinates
+
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-TIMEOUT_SECONDS = 15
+TIMEOUT_SECONDS = 10
+FORECAST_TTL_SECONDS = 30 * 60
+PLACE_TTL_SECONDS = 30 * 24 * 60 * 60
+SOURCE = "open-meteo"
 
 
 class WeatherError(Exception):
-    """Raised when weather data cannot be fetched. The message is safe to show the user."""
+    """The request itself is invalid, e.g. an empty or unknown place name. Safe to show the user."""
+
+
+def _get_json(url: str, params: dict) -> dict:
+    try:
+        response = requests.get(url, params=params, timeout=TIMEOUT_SECONDS)
+        response.raise_for_status()
+        return response.json()
+    except (requests.RequestException, ValueError) as error:
+        raise SourceDown(f"Weather service unavailable ({type(error).__name__}).") from error
 
 
 def find_place(name: str) -> dict:
-    """Return the best match for a place name inside India."""
+    """Return the best match for a place name inside India, or the exact point for 'lat,lon'."""
+    coordinates = parse_coordinates(name)
+    if coordinates:
+        lat, lon = coordinates
+        return {"name": f"{lat:.4f}, {lon:.4f}", "state": "", "latitude": lat, "longitude": lon}
     query = name.strip()
     if not query:
         raise WeatherError("Please enter a village, town, or district name.")
-    try:
-        response = requests.get(
-            GEOCODE_URL,
-            params={"name": query, "count": 1, "countryCode": "IN", "language": "en"},
-            timeout=TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-    except requests.RequestException as error:
-        raise WeatherError(f"Place lookup failed: {error}") from error
+    return cached_fetch(
+        f"{SOURCE}-geocode",
+        f"place:{query.lower()}",
+        PLACE_TTL_SECONDS,
+        lambda: _lookup_place(query),
+    )
 
-    results = response.json().get("results") or []
+
+def _lookup_place(query: str) -> dict:
+    results = _get_json(
+        GEOCODE_URL,
+        {"name": query, "count": 1, "countryCode": "IN", "language": "en"},
+    ).get("results") or []
     if not results:
         raise WeatherError(f"No Indian place found matching '{query}'.")
     place = results[0]
@@ -45,32 +67,29 @@ def find_place(name: str) -> dict:
 
 
 def get_weather(name: str, days: int = 3) -> dict:
-    """Return a daily forecast for the place, with the fetch time for citations."""
+    """Return a daily forecast for the place, with cache status and fetch time for citations."""
     place = find_place(name)
-    try:
-        response = requests.get(
-            FORECAST_URL,
-            params={
-                "latitude": place["latitude"],
-                "longitude": place["longitude"],
-                "daily": "precipitation_sum,temperature_2m_max,temperature_2m_min",
-                "forecast_days": days,
-                "timezone": "auto",
-            },
-            timeout=TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-    except requests.RequestException as error:
-        raise WeatherError(f"Weather service unavailable: {error}") from error
+    return cached_fetch(
+        SOURCE,
+        f"forecast:{place['latitude']:.3f},{place['longitude']:.3f}:{days}",
+        FORECAST_TTL_SECONDS,
+        lambda: _lookup_forecast(place, days),
+    )
 
-    daily = response.json()["daily"]
-    forecast = [
+
+def _lookup_forecast(place: dict, days: int) -> dict:
+    daily = _get_json(
+        FORECAST_URL,
         {
-            "date": date,
-            "rain_mm": rain,
-            "max_c": t_max,
-            "min_c": t_min,
-        }
+            "latitude": place["latitude"],
+            "longitude": place["longitude"],
+            "daily": "precipitation_sum,temperature_2m_max,temperature_2m_min",
+            "forecast_days": days,
+            "timezone": "auto",
+        },
+    )["daily"]
+    forecast = [
+        {"date": date, "rain_mm": rain, "max_c": t_max, "min_c": t_min}
         for date, rain, t_max, t_min in zip(
             daily["time"],
             daily["precipitation_sum"],

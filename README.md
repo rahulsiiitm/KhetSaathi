@@ -73,18 +73,25 @@ python -m pytest -q
 ## Project layout
 
 ```
-app.py              FastAPI routes: /, /advise, /health
-agent.py            Gemini function-calling loop and tool dispatch
-safety.py           dosage removal, source list, warnings
-tools/weather.py    Open-Meteo lookup and forecast
-tools/mandi.py      data.gov.in mandi prices with retries
-static/index.html   farmer page
-tests/              unit tests for tools, safety, and the API
+app.py              FastAPI routes: /, /advise, /health, /status
+agent.py            Gemini chat with three tools, the reply-language rule, and tool dispatch
+risk.py             fixed rules R1 to R5 on the forecast (heavy rain, heat, cold, spray window, dry spell)
+safety.py           dosage removal, figure-grounding check, source list, freshness labels
+store.py            SQLite: TTL cache, source health, circuit breaker state, advice log
+tools/cache.py      one path for every live call: cache, circuit breaker, stale fallback
+tools/weather.py    Open-Meteo lookup and forecast (forecast cached 30 min, place lookup 30 days)
+tools/mandi.py      data.gov.in mandi prices (cached 6 hours)
+static/index.html   farmer page with voice input and read-aloud
+tests/              39 tests: cache and breaker, risk rules, tools, safety, and API
 ```
+
+**Data flow for one question:** the page posts the question to `/advise`. The agent calls the weather, risk, and mandi tools as the model needs them. Each tool goes through `tools/cache.py`, which serves a fresh cache entry if one exists, skips a source the circuit breaker has paused, or fetches live and saves the result. If the live fetch fails, the last saved result is returned and labeled stale. The risk rules run in code on the forecast. The model explains them but cannot add risks. `safety.py` then removes dosage lines, flags any figure with a unit that no tool returned, and lists the sources with their freshness. The answer and its latency are logged in SQLite.
+
+**Operations:** `GET /status` reports each data source (last success, last error, failures in a row, paused or not), cache size, and the number of answers served with average latency. After three failures in a row, a source is paused for 10 minutes.
 
 ## Limits and honest gaps
 
-- Mandi prices depend on an external service that is intermittently unavailable. The app shows an error rather than an old or made-up price.
+- Mandi prices depend on an external service that is intermittently unavailable. The app serves the last saved price, labeled stale with its fetch time. If nothing was ever saved, it says the prices are unavailable.
 - Coverage is not national. Only markets in the dataset appear, so some districts have no prices.
 - Soil data is not included in this version. SoilGrids returned errors during testing.
 - Voice input and output are not included yet. They are planned as a browser feature.

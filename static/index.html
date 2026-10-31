@@ -4,125 +4,787 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>KhetSaathi</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --green: #2f6b3a; --bg: #f5f7f2; --card: #ffffff; --text: #1d2a1f; --muted: #5d6b5f; --warn: #8a5a00; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
-    main { max-width: 640px; margin: 0 auto; padding: 16px; }
-    h1 { font-size: 1.6rem; margin: 8px 0 4px; color: var(--green); }
-    p.sub { margin: 0 0 16px; color: var(--muted); }
-    form, .result { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    label { display: block; font-weight: 600; margin: 12px 0 4px; }
-    input, select, textarea { width: 100%; font: inherit; padding: 10px; border: 1px solid #c9d2c4; border-radius: 8px; }
-    textarea { min-height: 80px; resize: vertical; }
-    button { margin-top: 16px; width: 100%; padding: 12px; font: inherit; font-weight: 600; color: #fff; background: var(--green); border: 0; border-radius: 8px; cursor: pointer; }
-    button:disabled { opacity: .6; cursor: wait; }
-    .result { margin-top: 16px; display: none; }
-    .advice { white-space: pre-wrap; line-height: 1.5; }
-    .warn { color: var(--warn); margin: 8px 0; }
-    .error { color: #a12626; margin-top: 12px; display: none; }
-    details { margin-top: 12px; }
-    pre { white-space: pre-wrap; font-size: .85rem; background: #f0f3ee; padding: 8px; border-radius: 6px; overflow-x: auto; }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) { --bg: #141a15; --card: #1d251f; --text: #e6efe7; --muted: #a6b5a8; --green: #7fbf8a; --warn: #e0b35c; }
+    :root {
+      --forest: #0c2519;
+      --forest-2: #163a2a;
+      --lime: #c7f25c;
+      --lime-ink: #0c2519;
+      --paper: #f4f5ef;
+      --card: #ffffff;
+      --ink: #0c2519;
+      --muted: #5b6b60;
+      --line: #d7dbd0;
+      --rec: #e0603f;
+      --warn-bg: #fff4d6;
+      --warn-ink: #5a3d07;
+      --error-bg: #fbe4df;
+      --error-ink: #7a1f10;
+      --size: 18px;
     }
-    :root[data-theme="dark"] { --bg: #141a15; --card: #1d251f; --text: #e6efe7; --muted: #a6b5a8; --green: #7fbf8a; --warn: #e0b35c; }
-    body { background: var(--bg); }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0; font-family: "DM Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+      font-size: var(--size); color: var(--ink); background-color: var(--paper);
+      display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+    html[lang="hi"] body { font-family: "Noto Sans Devanagari", "DM Sans", system-ui, sans-serif; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
+    :focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
+    .hidden { display: none !important; }
+
+    /* Hero: the photo shows through at the top, fading to the header colour */
+    .hero {
+      position: relative; overflow: hidden; color: #fff; padding: 14px 18px 64px;
+      background: linear-gradient(180deg, rgba(12,37,25,.8) 0%, rgba(12,37,25,.55) 45%, rgba(12,37,25,0) 90%);
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(100deg, rgba(199,242,92,.06) 0 2px, transparent 2px 80px);
+    }
+    .topbar { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .brand { font-weight: 700; font-size: 1.1rem; letter-spacing: .4px; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    .seg { display: inline-flex; border: 1px solid #47685a; border-radius: 999px; overflow: hidden; }
+    .seg button {
+      min-height: 44px; min-width: 68px; padding: 0 12px; border: 0; background: transparent; color: #d9e8de; font-size: .95rem; font-weight: 500;
+    }
+    .seg button[aria-pressed="true"] { background: var(--lime); color: var(--lime-ink); font-weight: 700; }
+    .size-btn {
+      min-height: 44px; min-width: 44px; border-radius: 999px; border: 1px solid #47685a; background: transparent; color: #d9e8de; font-weight: 600;
+    }
+    .headline { position: relative; z-index: 1; margin: 26px 0 0; font-size: clamp(1.7rem, 7vw, 2.2rem); font-weight: 700; line-height: 1.12; letter-spacing: -.01em; }
+    .headline em { font-style: normal; color: var(--lime); }
+    .sub { position: relative; z-index: 1; margin: 8px 0 0; color: #e3eee7; font-size: .98rem; }
+
+    /* Main action: the microphone card overlaps the hero edge */
+    .ask-card {
+      position: relative; z-index: 2; margin: -48px 16px 0; background: var(--card); border-radius: 22px;
+      padding: 18px 16px 16px; box-shadow: 0 10px 30px rgba(12,37,25,.12);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .mic {
+      width: 128px; height: 128px; border-radius: 50%; border: 0; background: var(--lime); color: var(--lime-ink);
+      display: grid; place-items: center;
+    }
+    .mic:disabled { opacity: .6; }
+    .mic svg { width: 56px; height: 56px; }
+    .mic.listening { background: var(--rec); color: #fff; animation: pulse 1.3s ease-out infinite; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(224,96,63,.45); }
+      100% { box-shadow: 0 0 0 24px rgba(224,96,63,0); }
+    }
+    .prompt { margin: 0; font-size: 1.15rem; font-weight: 700; text-align: center; min-height: 1.4em; }
+    .prompt-sub { margin: 0; color: var(--muted); font-size: .95rem; text-align: center; }
+    .link {
+      background: none; border: 0; padding: 8px 10px; min-height: 44px; color: var(--forest-2); font-weight: 600; text-decoration: underline;
+    }
+    .typed { width: 100%; display: grid; gap: 10px; }
+    .typed textarea {
+      width: 100%; min-height: 84px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; background: #fff; font-size: 1rem; resize: vertical;
+    }
+    .btn {
+      min-height: 52px; padding: 0 22px; border-radius: 999px; border: 0; background: var(--forest); color: #fff; font-weight: 700; font-size: 1rem;
+    }
+    .btn.lime { background: var(--lime); color: var(--lime-ink); }
+    .btn.ghost { background: transparent; color: var(--forest); border: 2px solid var(--forest); }
+    .btn.small { min-height: 44px; padding: 0 16px; font-size: .95rem; }
+
+    /* Conversation thread: each turn is what the farmer asked, then the loader, answer, or failure */
+    .thread { display: grid; gap: 14px; padding: 14px 16px 0; max-width: 560px; width: 100%; margin: 0 auto; }
+    .thread:empty { display: none; }
+    .turn { display: grid; gap: 12px; scroll-margin-top: 12px; }
+    .heard { background: var(--card); border-radius: 16px; padding: 12px 16px; border-left: 4px solid var(--lime); }
+    .heard .k { color: var(--muted); font-size: .82rem; display: block; }
+    .turn:not([data-state="loading"]) .loading,
+    .turn:not([data-state="done"]) .answer,
+    .turn:not([data-state="failed"]) .failed { display: none; }
+
+    .loading {
+      background: var(--card); border-radius: 22px; padding: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px;
+      box-shadow: 0 6px 20px rgba(12,37,25,.08);
+    }
+    .dots { display: inline-flex; gap: 6px; }
+    .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--forest-2); animation: bounce 1.2s infinite ease-in-out; }
+    .dots i:nth-child(2) { animation-delay: .15s; }
+    .dots i:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: .35; }
+      40% { transform: translateY(-6px); opacity: 1; }
+    }
+    .loading .step { font-weight: 700; font-size: 1.05rem; }
+    .loading .note { width: 100%; color: var(--muted); font-size: .9rem; margin: 0; }
+    .bar { width: 100%; height: 6px; background: #e6e9df; border-radius: 999px; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 35%; background: var(--forest-2); border-radius: 999px; animation: slide 1.6s ease-in-out infinite; }
+    @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+    .failed { background: var(--error-bg); color: var(--error-ink); border-radius: 22px; padding: 16px 18px; display: grid; gap: 12px; }
+    .failed p { margin: 0; font-size: 1rem; }
+    .failed .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .failed .actions .btn { flex: 1; min-width: 130px; background: var(--error-ink); }
+    .failed .actions .btn.ghost { background: transparent; color: var(--error-ink); border-color: var(--error-ink); }
+
+    .answer { background: var(--card); border-radius: 22px; padding: 20px 18px; box-shadow: 0 6px 20px rgba(12,37,25,.08); }
+    .decision { margin: 0 0 12px; font-size: 1.4rem; font-weight: 700; line-height: 1.3; }
+    .today { margin: 0 0 14px; font-size: 1.05rem; background: #eef5e4; border-radius: 14px; padding: 10px 14px; }
+    .today .k { color: var(--muted); font-size: .82rem; display: block; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions .btn { flex: 1; min-width: 130px; }
+    details.more { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+    details.more summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 700; color: var(--forest-2); }
+    details.more h3 { font-size: .82rem; color: var(--muted); margin: 14px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    details.more ul { margin: 0; padding-left: 20px; font-size: .97rem; }
+    details.more li { margin: 4px 0; }
+    details.more .sources li { color: var(--muted); font-size: .86rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .96rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:first-child { white-space: nowrap; }
+    .notice { border-radius: 14px; padding: 10px 14px; font-size: .95rem; background: var(--warn-bg); color: var(--warn-ink); }
+    .notice.error { background: var(--error-bg); color: var(--error-ink); }
+    .notices { display: grid; gap: 8px; margin-top: 12px; }
+    .thread-tools { text-align: center; padding: 10px 16px 0; }
+    .thread-tools .link { color: #f2f7f3; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+
+    /* Location: set once, remembered on this phone */
+    .field-band { margin-top: 14px; padding: 0; }
+    .where { margin: 0 16px; background: var(--card); border-radius: 16px; padding: 10px 14px; }
+    .where summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 48px; cursor: pointer; }
+    .where summary::-webkit-details-marker { display: none; }
+    .where .label { color: var(--muted); font-size: .82rem; display: block; }
+    .where .value { font-weight: 600; }
+    .where .change { color: var(--forest-2); font-weight: 700; text-decoration: underline; white-space: nowrap; }
+    .fields { display: grid; gap: 8px; padding: 4px 0 6px; }
+    .fields label { font-size: .9rem; color: var(--muted); }
+    .fields input, .fields select {
+      width: 100%; min-height: 50px; padding: 0 14px; border: 2px solid var(--line); border-radius: 12px; background: #fff; font-size: 1rem;
+    }
+    footer { padding: 18px 16px 22px; color: #e6efe6; font-size: .8rem; text-align: center; }
+
+    /* Background: the field photo is clear at the top and dark and blurred toward the bottom */
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      background: linear-gradient(rgba(12,37,25,.3), rgba(12,37,25,.3)), url("/static/field.jpg") center / cover no-repeat;
+    }
+    body::after {
+      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(12,37,25,0) 0%, rgba(12,37,25,.9) 100%);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 15%, #000 100%);
+      mask-image: linear-gradient(to bottom, transparent 15%, #000 100%);
+    }
+    @media (max-height: 700px) { .mic { width: 104px; height: 104px; } .mic svg { width: 46px; height: 46px; } }
+    @media (prefers-reduced-motion: reduce) {
+      .dots i, .bar span, .mic.listening { animation: none; }
+    }
   </style>
 </head>
 <body>
-<main>
-  <h1>KhetSaathi</h1>
-  <p class="sub">Live weather and mandi prices, with advice you can check. Ask in Hindi or English.</p>
 
-  <form id="advice-form">
-    <label for="question">Your question</label>
-    <textarea id="question" required minlength="3" maxlength="500" placeholder="e.g. Should I spray my potato crop this week?"></textarea>
+<header class="hero">
+  <div class="topbar">
+    <div class="brand">KHETSAATHI</div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="lang-hi" aria-pressed="false">हिन्दी</button>
+        <button type="button" id="lang-en" aria-pressed="true">English</button>
+      </div>
+      <button type="button" class="size-btn" id="size-up" aria-label="Bigger text">A+</button>
+    </div>
+  </div>
+  <h1 class="headline" data-t="headline">Ask about your <em>field</em>, by voice.</h1>
+  <p class="sub" data-t="sub">Weather, field risks and mandi prices, turned into a plan for today.</p>
+</header>
 
-    <label for="place">Village or town</label>
-    <input id="place" required minlength="2" maxlength="80" placeholder="e.g. Ludhiana">
-
-    <label for="state">State</label>
-    <input id="state" required minlength="2" maxlength="60" placeholder="e.g. Punjab">
-
-    <label for="crop">Crop</label>
-    <select id="crop" required>
-      <option value="Potato">Potato</option>
-      <option value="Tomato">Tomato</option>
-      <option value="Onion">Onion</option>
-      <option value="Cauliflower">Cauliflower</option>
-      <option value="Paddy(Common)">Paddy (common)</option>
-    </select>
-
-    <button id="submit" type="submit">Get advice</button>
-    <p id="error" class="error" role="alert"></p>
-  </form>
-
-  <section id="result" class="result" aria-live="polite">
-    <h2>Advice</h2>
-    <div id="advice" class="advice"></div>
-    <div id="warnings"></div>
-    <details>
-      <summary>How this was worked out</summary>
-      <pre id="trace"></pre>
-    </details>
+<main style="display:flex; flex-direction:column; max-width:560px; width:100%; margin:0 auto;">
+  <section class="ask-card" aria-labelledby="prompt">
+    <button type="button" id="mic" class="mic" aria-label="Tap to ask by voice">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+        <path d="M5 11a7 7 0 0 0 14 0"></path>
+        <line x1="12" y1="18" x2="12" y2="21"></line>
+      </svg>
+    </button>
+    <p class="prompt" id="prompt" role="status" aria-live="polite" data-t="tapToAsk">Tap and ask your question</p>
+    <p class="prompt-sub" id="subprompt" data-t="subAsk">Speak in Hindi or English</p>
+    <button type="button" id="type-toggle" class="link" data-t="typeInstead">Type instead</button>
+    <form id="typed-form" class="typed hidden" novalidate>
+      <textarea id="question" maxlength="500" aria-label="Your question" data-tp="typePh" placeholder="Should I spray my potato this week?"></textarea>
+      <button type="submit" class="btn lime" id="type-submit" data-t="ask">Ask</button>
+    </form>
   </section>
+
+  <div id="error" class="notice error hidden" role="alert" style="margin:14px 16px 0;"></div>
+
+  <section id="thread" class="thread" aria-label="Conversation"></section>
+
+  <template id="turn-tpl">
+    <article class="turn" data-state="loading">
+      <div class="heard"><span class="k" data-t="youAsked">You asked</span><span class="q"></span></div>
+      <div class="loading" role="status">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="step"></span>
+        <div class="bar" aria-hidden="true"><span></span></div>
+        <p class="note" data-t="loadingNote">This can take up to 30 seconds.</p>
+      </div>
+      <div class="answer">
+        <p class="decision"></p>
+        <p class="today hidden"><span class="k" data-t="today">Today</span><span class="today-text"></span></p>
+        <div class="actions">
+          <button type="button" class="btn listen" data-t="listen">Listen</button>
+          <button type="button" class="btn ghost stop" data-t="stop">Stop</button>
+        </div>
+        <details class="more">
+          <summary data-t="more">More details</summary>
+          <h3 data-t="secPlan">Day-by-day plan</h3><div class="plan"></div>
+          <h3 data-t="secBased">Based on</h3><ul class="based"></ul>
+          <h3 data-t="secUnknown">Not known</h3><ul class="unknown"></ul>
+          <h3 data-t="secMarkets">Nearby markets</h3><div class="markets"></div>
+          <h3 data-t="secSources">Sources</h3><ul class="sources"></ul>
+        </details>
+        <div class="notices"></div>
+      </div>
+      <div class="failed" role="alert">
+        <p class="fail-msg"></p>
+        <div class="actions">
+          <button type="button" class="btn retry" data-t="retry">Try again</button>
+          <button type="button" class="btn ghost dismiss" data-t="dismiss">Remove</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <div class="thread-tools">
+    <button type="button" id="new-chat" class="link hidden" data-t="newChat">Start a new conversation</button>
+  </div>
+
+  <div class="field-band">
+    <details class="where" id="where">
+      <summary>
+        <span>
+          <span class="label" data-t="whereLabel">Your village and crop</span>
+          <span class="value" id="where-value">—</span>
+        </span>
+        <span class="change" data-t="change">Change</span>
+      </summary>
+      <div class="fields">
+        <div class="locate-row">
+          <button type="button" id="locate" class="btn small ghost" data-t="useLocation">Use my location</button>
+          <span id="locate-status" class="hint" role="status"></span>
+        </div>
+        <label for="place" data-t="placeLabel">Village or town</label>
+        <input id="place" autocomplete="off" data-tp="placePh" placeholder="Ludhiana">
+        <label for="state" data-t="stateLabel">State</label>
+        <input id="state" autocomplete="off" data-tp="statePh" placeholder="Punjab">
+        <label for="crop" data-t="cropLabel">Crop</label>
+        <input id="crop" list="crop-list" autocomplete="off" value="Potato" data-tp="cropPh" placeholder="Potato">
+        <datalist id="crop-list"></datalist>
+      </div>
+    </details>
+    <footer><span data-t="footer">General guidance only. For chemicals and doses, ask your Krishi Vigyan Kendra or agriculture officer.</span></footer>
+  </div>
 </main>
 
 <script>
-  const form = document.getElementById("advice-form");
-  const submit = document.getElementById("submit");
-  const errorBox = document.getElementById("error");
-  const result = document.getElementById("result");
+  const STRINGS = {
+    en: {
+      headline: 'Ask about your <em>field</em>, by voice.', sub: "Weather, field risks and mandi prices, turned into a plan for today.",
+      whereLabel: "Your village and crop", change: "Change",
+      placeLabel: "Village or town", stateLabel: "State", cropLabel: "Crop",
+      cropPotato: "Potato", cropTomato: "Tomato", cropOnion: "Onion", cropCauliflower: "Cauliflower", cropPaddy: "Paddy (common)",
+      tapToAsk: "Tap and ask your question", subAsk: "Speak in Hindi or English",
+      tapToFollow: "Ask a follow-up question", subFollow: "For example: and tomorrow?",
+      listening: "Listening… tap again when you finish", listeningSub: "Tap the red button when you are done",
+      typeInstead: "Type instead", ask: "Ask", youAsked: "You asked", today: "Today", listen: "Listen", stop: "Stop",
+      more: "More details", secPlan: "Day-by-day plan", secBased: "Based on", secUnknown: "Not known", secSources: "Sources", secMarkets: "Nearby markets",
+      useLocation: "Use my location", locating: "Finding your location…", locateFound: "Location found. Check the village and state below.",
+      locateDenied: "Location is off. Type your village and state.", locateFailed: "Could not find a place name for this location. Type it instead.",
+      locateWhy: "Used only to find your village, the weather at your exact spot, and the nearest markets.",
+      cropPh: "e.g. Potato, Garlic", noMarkets: "No nearby market with a price for this crop yet.",
+      marketName: "Market", marketKm: "km away", marketPrice: "Modal price per quintal", marketDate: "Arrival date",
+      newChat: "Start a new conversation", confirmNew: "Start a new conversation? This clears the current one.",
+      stepWeather: "Checking the weather…", stepRisk: "Checking field risks…", stepPrices: "Checking mandi prices…", stepWrite: "Writing your plan…",
+      checking: "Checking live weather and prices…", checkingSub: "Please wait, this is live data",
+      loadingNote: "This can take up to 30 seconds.",
+      retry: "Try again", dismiss: "Remove", failedTitle: "The answer did not come through.",
+      setupFirst: "Enter your village and state first.",
+      heardNothing: "I could not hear you. Tap the button and speak again.",
+      micBlocked: "Microphone is blocked. Allow it in the browser, or type instead.",
+      noSpeech: "Voice is not available on this phone. Please type your question.",
+      timeout: "The answer is taking too long. Please try again.",
+      network: "Could not reach the server. Check your internet and try again.",
+      generic: "Something went wrong. Please try again.",
+      footer: "General guidance only. For chemicals and doses, ask your Krishi Vigyan Kendra or agriculture officer.",
+      placePh: "e.g. Ludhiana", statePh: "e.g. Punjab", typePh: "Should I spray my potato this week?",
+    },
+    hi: {
+      headline: 'अपने <em>खेत</em> के बारे में बोलकर पूछें।', sub: "मौसम, खेत के जोखिम और मंडी भाव, आज की योजना के रूप में।",
+      whereLabel: "आपका गांव और फसल", change: "बदलें",
+      placeLabel: "गांव या कस्बा", stateLabel: "राज्य", cropLabel: "फसल",
+      cropPotato: "आलू", cropTomato: "टमाटर", cropOnion: "प्याज", cropCauliflower: "फूलगोभी", cropPaddy: "धान (सामान्य)",
+      tapToAsk: "बटन दबाएं और सवाल पूछें", subAsk: "हिन्दी या अंग्रेज़ी में बोलें",
+      tapToFollow: "आगे का सवाल पूछें", subFollow: "जैसे: और कल?",
+      listening: "सुन रहे हैं… बोलना खत्म हो तो फिर दबाएं", listeningSub: "पूरा होने पर लाल बटन दबाएं",
+      typeInstead: "लिखकर पूछें", ask: "पूछें", youAsked: "आपने पूछा", today: "आज", listen: "सुनें", stop: "रोकें",
+      more: "और जानकारी", secPlan: "दिन-वार योजना", secBased: "आधार", secUnknown: "पता नहीं", secSources: "स्रोत", secMarkets: "पास की मंडियां",
+      useLocation: "मेरी जगह इस्तेमाल करें", locating: "आपकी जगह खोजी जा रही है…", locateFound: "जगह मिल गई। नीचे गांव और राज्य जांच लें।",
+      locateDenied: "जगह की अनुमति बंद है। अपना गांव और राज्य लिखें।", locateFailed: "इस जगह का नाम नहीं मिला। कृपया लिखकर बताएं।",
+      locateWhy: "इसका उपयोग केवल आपका गांव, आपकी जगह का मौसम और पास की मंडियां ढूंढने के लिए होगा।",
+      cropPh: "जैसे आलू, लहसुन", noMarkets: "इस फसल का पास की किसी मंडी में अभी भाव नहीं है।",
+      marketName: "मंडी", marketKm: "किमी दूर", marketPrice: "भाव प्रति क्विंटल", marketDate: "आवक की तारीख",
+      newChat: "नई बातचीत शुरू करें", confirmNew: "नई बातचीत शुरू करें? इससे मौजूदा बातचीत हट जाएगी।",
+      stepWeather: "मौसम देखा जा रहा है…", stepRisk: "खेत के जोखिम जांचे जा रहे हैं…", stepPrices: "मंडी भाव देखे जा रहे हैं…", stepWrite: "आपकी योजना लिखी जा रही है…",
+      checking: "मौसम और भाव लाइव देखे जा रहे हैं…", checkingSub: "कृपया प्रतीक्षा करें, यह लाइव डेटा है",
+      loadingNote: "इसमें 30 सेकंड तक लग सकते हैं।",
+      retry: "फिर कोशिश करें", dismiss: "हटाएं", failedTitle: "जवाब नहीं आ पाया।",
+      setupFirst: "पहले अपना गांव और राज्य लिखें।",
+      heardNothing: "आवाज़ सुनाई नहीं दी। बटन दबाकर फिर बोलें।",
+      micBlocked: "माइक्रोफ़ोन बंद है। ब्राउज़र में अनुमति दें, या लिखकर पूछें।",
+      noSpeech: "इस फोन पर बोलकर पूछना उपलब्ध नहीं है। कृपया लिखकर पूछें।",
+      timeout: "जवाब में बहुत समय लग रहा है। कृपया फिर कोशिश करें।",
+      network: "सर्वर से संपर्क नहीं हो सका। इंटरनेट जांचें और फिर कोशिश करें।",
+      generic: "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।",
+      footer: "यह सामान्य मार्गदर्शन है। रसायन और मात्रा के लिए कृषि विज्ञान केंद्र (KVK) या कृषि अधिकारी से पूछें।",
+      placePh: "जैसे लुधियाना", statePh: "जैसे पंजाब", typePh: "क्या इस हफ्ते मुझे आलू पर स्प्रे करना चाहिए?",
+    },
+  };
+  const MAX_HISTORY = 4;
+  const STEP_KEYS = ["stepWeather", "stepRisk", "stepPrices", "stepWrite"];
+  let lang = "en";
+  let busy = false;
+  let listening = null;
+  const conversation = []; // every answered turn: { question, answer }, oldest first
+  const t = (key) => (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
 
-  function showError(message) {
-    errorBox.textContent = message;
-    errorBox.style.display = "block";
+  const mic = document.getElementById("mic");
+  const typeSubmit = document.getElementById("type-submit");
+  const questionBox = document.getElementById("question");
+  const thread = document.getElementById("thread");
+  const newChat = document.getElementById("new-chat");
+
+  // Fill every [data-t] label inside a root element (used for the page and for each new turn).
+  function translate(root) {
+    root.querySelectorAll("[data-t]").forEach((el) => {
+      if (el.dataset.t === "headline") el.innerHTML = t("headline");
+      else el.textContent = t(el.dataset.t);
+    });
+    root.querySelectorAll("[data-tp]").forEach((el) => { el.placeholder = t(el.dataset.tp); });
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    errorBox.style.display = "none";
-    result.style.display = "none";
-    submit.disabled = true;
-    submit.textContent = "Checking live data...";
+  // ---- Language: one tap switches every label, every answer and the voice ----
+  function applyLanguage(next) {
+    lang = next;
+    document.documentElement.lang = next;
+    document.getElementById("lang-hi").setAttribute("aria-pressed", String(next === "hi"));
+    document.getElementById("lang-en").setAttribute("aria-pressed", String(next === "en"));
+    translate(document);
+    if (!listening && !busy) updatePrompt();
+    renderWhere();
+  }
+  document.getElementById("lang-hi").addEventListener("click", () => applyLanguage("hi"));
+  document.getElementById("lang-en").addEventListener("click", () => applyLanguage("en"));
 
-    const body = {
-      question: document.getElementById("question").value,
-      place: document.getElementById("place").value,
-      state: document.getElementById("state").value,
-      crop: document.getElementById("crop").value,
+  // ---- Text size: one button, cycles bigger and back ----
+  let size = 18;
+  document.getElementById("size-up").addEventListener("click", () => {
+    size = size >= 24 ? 18 : size + 2;
+    document.documentElement.style.setProperty("--size", size + "px");
+  });
+
+  // ---- Remember place and crop on this phone, so the farmer sets them once ----
+  const FIELDS = ["place", "state", "crop"];
+  function loadWhere() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("khetsaathi-where") || "{}");
+      FIELDS.forEach((f) => { if (saved[f]) document.getElementById(f).value = saved[f]; });
+    } catch (e) { /* storage blocked: the farmer types again */ }
+  }
+  function saveWhere() {
+    try {
+      const data = {};
+      FIELDS.forEach((f) => { data[f] = document.getElementById(f).value.trim(); });
+      localStorage.setItem("khetsaathi-where", JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+  function whereReady() {
+    return document.getElementById("place").value.trim().length >= 2 && document.getElementById("state").value.trim().length >= 2;
+  }
+  function renderWhere() {
+    const place = document.getElementById("place").value.trim();
+    const state = document.getElementById("state").value.trim();
+    const crop = document.getElementById("crop").value.trim();
+    document.getElementById("where-value").textContent = whereReady()
+      ? `${place}, ${state} · ${crop}`
+      : t("setupFirst");
+  }
+  FIELDS.forEach((f) => document.getElementById(f).addEventListener("change", () => { saveWhere(); renderWhere(); }));
+  // Typing a village by hand means it is no longer the GPS position, so the exact point is dropped.
+  ["place", "state"].forEach((f) => document.getElementById(f).addEventListener("input", () => { coords = null; }));
+  loadWhere();
+  document.getElementById("where").open = !whereReady();
+
+  // ---- Crop suggestions: the crops the market data actually uses ----
+  async function loadCrops() {
+    try {
+      const response = await fetch("/crops");
+      const data = await response.json();
+      document.getElementById("crop-list").replaceChildren(...data.crops.map((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        return option;
+      }));
+    } catch (error) { /* suggestions are optional; typing still works */ }
+  }
+
+  // ---- Exact location: the browser's position, turned into a village and district the farmer can check ----
+  let coords = null;
+  function setLocateStatus(text) { document.getElementById("locate-status").textContent = text; }
+  function locateMe() {
+    if (!("geolocation" in navigator)) { setLocateStatus(t("locateDenied")); return; }
+    setLocateStatus(t("locating"));
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const latitude = Math.round(position.coords.latitude * 10000) / 10000;
+      const longitude = Math.round(position.coords.longitude * 10000) / 10000;
+      coords = { latitude, longitude };
+      try {
+        const response = await fetch("/locate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(coords),
+        });
+        const data = await response.json();
+        if (!response.ok) { setLocateStatus(data.detail || t("locateFailed")); return; }
+        if (data.village) document.getElementById("place").value = data.village;
+        if (data.state) document.getElementById("state").value = data.state;
+        saveWhere();
+        renderWhere();
+        setLocateStatus(`${t("locateFound")} ${t("locateWhy")}`);
+      } catch (error) {
+        setLocateStatus(t("locateFailed"));
+      }
+    }, () => {
+      coords = null;
+      try { localStorage.setItem("khetsaathi-location-denied", "1"); } catch (e) { /* ignore */ }
+      setLocateStatus(t("locateDenied"));
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10 * 60 * 1000 });
+  }
+  document.getElementById("locate").addEventListener("click", locateMe);
+  // Try once on arrival, unless the farmer already refused. The browser asks permission itself.
+  let refusedBefore = false;
+  try { refusedBefore = localStorage.getItem("khetsaathi-location-denied") === "1"; } catch (e) { /* ignore */ }
+  if (!refusedBefore) locateMe();
+  loadCrops();
+
+  // ---- Prompt text and errors ----
+  function updatePrompt() {
+    if (conversation.length) setPrompt(t("tapToFollow"), t("subFollow"));
+    else setPrompt(t("tapToAsk"), t("subAsk"));
+  }
+  function setPrompt(main, sub) {
+    document.getElementById("prompt").textContent = main;
+    document.getElementById("subprompt").textContent = sub;
+  }
+  function showError(message) {
+    const box = document.getElementById("error");
+    box.textContent = message;
+    box.classList.remove("hidden");
+  }
+  function clearError() { document.getElementById("error").classList.add("hidden"); }
+
+  // ---- Voice input: tap to start, tap again to finish. The question is sent as soon as it is heard. ----
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    mic.classList.add("hidden");
+    document.getElementById("typed-form").classList.remove("hidden");
+    document.getElementById("type-toggle").classList.add("hidden");
+    showError(t("noSpeech"));
+  }
+  mic.addEventListener("click", () => {
+    if (busy) return;
+    if (listening) { listening.stop(); return; }
+    clearError();
+    if (!whereReady()) {
+      document.getElementById("where").open = true;
+      showError(t("setupFirst"));
+      return;
+    }
+    listening = new Recognition();
+    listening.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    listening.interimResults = false;
+    listening.maxAlternatives = 1;
+    let heard = false;
+    listening.onresult = (event) => {
+      heard = true;
+      const text = event.results[0][0].transcript.trim();
+      if (text) askQuestion(text);
     };
+    listening.onerror = (event) => {
+      heard = true;
+      showError(event.error === "not-allowed" ? t("micBlocked") : t("heardNothing"));
+    };
+    listening.onend = () => {
+      listening = null;
+      mic.classList.remove("listening");
+      if (!busy) updatePrompt();
+      if (!heard) showError(t("heardNothing"));
+    };
+    mic.classList.add("listening");
+    setPrompt(t("listening"), t("listeningSub"));
+    listening.start();
+  });
 
+  // ---- Typing fallback: Enter sends, Shift+Enter starts a new line ----
+  document.getElementById("type-toggle").addEventListener("click", () => {
+    document.getElementById("typed-form").classList.toggle("hidden");
+    if (!document.getElementById("typed-form").classList.contains("hidden")) questionBox.focus();
+  });
+  questionBox.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      document.getElementById("typed-form").requestSubmit();
+    }
+  });
+  document.getElementById("typed-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (busy) return;
+    const text = questionBox.value.trim();
+    if (text.length < 3) { showError(t("heardNothing")); return; }
+    if (!whereReady()) { document.getElementById("where").open = true; showError(t("setupFirst")); return; }
+    questionBox.value = "";
+    askQuestion(text);
+  });
+
+  // ---- Answer: split the labelled sections, show the decision and today's line first ----
+  const HEADING = /^(Decision|Day-by-day plan|Based on|Not known|Sources)\s*:\s*(.*)$/i;
+  function parseAnswer(text) {
+    const sections = { decision: [], plan: [], based: [], unknown: [], sources: [] };
+    const map = { decision: "decision", "day-by-day plan": "plan", "based on": "based", "not known": "unknown", sources: "sources" };
+    let current = null;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line) continue;
+      const match = line.match(HEADING);
+      if (match) {
+        current = map[match[1].toLowerCase()];
+        if (match[2]) sections[current].push(match[2]);
+        continue;
+      }
+      if (current) sections[current].push(line.replace(/^[-•]\s*/, ""));
+      else sections.decision.push(line);
+    }
+    return sections;
+  }
+  function fill(list, items) {
+    list.replaceChildren(...items.map((text) => { const li = document.createElement("li"); li.textContent = text; return li; }));
+  }
+  function planInto(element, lines) {
+    const rows = lines.map((line) => { const m = line.match(/^(\S+?)\s*:\s*(.*)$/); return m ? [m[1], m[2]] : [null, line]; });
+    if (rows.length && rows.every(([d]) => d)) {
+      const table = document.createElement("table");
+      const body = table.createTBody();
+      rows.forEach(([date, action]) => { const row = body.insertRow(); row.insertCell().textContent = date; row.insertCell().textContent = action; });
+      element.replaceChildren(table);
+    } else {
+      const ul = document.createElement("ul");
+      fill(ul, lines);
+      element.replaceChildren(ul);
+    }
+  }
+
+  // ---- Reading aloud: each answer has its own Listen and Stop ----
+  // Natural voice from the server when it is set up; otherwise the phone's own voice.
+  let currentAudio = null;
+  function speakWithPhoneVoice(text) {
+    if (!("speechSynthesis" in window) || !text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voiceLang = /[ऀ-ॿ]/.test(text) ? "hi-IN" : "en-IN";
+    utterance.lang = voiceLang;
+    const voice = window.speechSynthesis.getVoices().find((v) => v.lang === voiceLang);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  }
+  async function speak(text) {
+    if (!text) return;
+    stopSpeaking();
+    try {
+      const response = await fetch("/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!response.ok) throw new Error("natural voice unavailable");
+      const audio = new Audio(URL.createObjectURL(await response.blob()));
+      currentAudio = audio;
+      audio.onended = () => { if (currentAudio === audio) currentAudio = null; };
+      await audio.play();
+    } catch (error) {
+      speakWithPhoneVoice(text);
+    }
+  }
+  function stopSpeaking() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  }
+
+  // ---- The thread: each question gets a turn that moves from loading to answered, or to failed ----
+  function newTurn(question) {
+    const node = document.getElementById("turn-tpl").content.firstElementChild.cloneNode(true);
+    translate(node);
+    node.querySelector(".q").textContent = question;
+    thread.appendChild(node);
+    newChat.classList.remove("hidden");
+    return node;
+  }
+
+  // Shows the steps the server works through. The timing is approximate, so the last step waits.
+  function startSteps(node) {
+    const stepEl = node.querySelector(".loading .step");
+    let index = 0;
+    stepEl.textContent = t(STEP_KEYS[0]);
+    return setInterval(() => {
+      index = Math.min(index + 1, STEP_KEYS.length - 1);
+      stepEl.textContent = t(STEP_KEYS[index]);
+    }, 3500);
+  }
+
+  function renderMarkets(box, markets) {
+    if (!markets.length) {
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = coords ? t("noMarkets") : "";
+      box.replaceChildren(p);
+      return;
+    }
+    const table = document.createElement("table");
+    const head = table.createTHead().insertRow();
+    [t("marketName"), t("marketKm"), t("marketPrice"), t("marketDate")].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      head.appendChild(th);
+    });
+    const body = table.createTBody();
+    markets.forEach((m) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = m.market;
+      row.insertCell().textContent = String(m.distance_km);
+      row.insertCell().textContent = m.modal_price_per_quintal;
+      row.insertCell().textContent = m.arrival_date;
+    });
+    box.replaceChildren(table);
+  }
+
+  function fillAnswer(node, question, data) {
+    const parts = parseAnswer(data.advice);
+    const decision = parts.decision.join(" ");
+    const today = parts.plan[0] || "";
+    node.querySelector(".decision").textContent = decision;
+    node.querySelector(".today").classList.toggle("hidden", !today);
+    node.querySelector(".today-text").textContent = today;
+    planInto(node.querySelector(".plan"), parts.plan);
+    fill(node.querySelector(".based"), parts.based);
+    fill(node.querySelector(".unknown"), parts.unknown);
+    fill(node.querySelector(".sources"), parts.sources);
+    renderMarkets(node.querySelector(".markets"), data.markets || []);
+    node.querySelector(".notices").replaceChildren(...data.warnings.map((text) => {
+      const p = document.createElement("div");
+      p.className = "notice";
+      p.textContent = text;
+      return p;
+    }));
+    const spoken = [decision, today].filter(Boolean).join(". ");
+    node.querySelector(".listen").addEventListener("click", () => speak(spoken));
+    node.querySelector(".stop").addEventListener("click", stopSpeaking);
+    return spoken;
+  }
+
+  function showFailed(node, message) {
+    node.dataset.state = "failed";
+    node.querySelector(".fail-msg").textContent = `${t("failedTitle")} ${message}`;
+    node.querySelector(".retry").onclick = () => {
+      const question = node.querySelector(".q").textContent;
+      node.remove();
+      if (!conversation.length && !thread.children.length) newChat.classList.add("hidden");
+      askQuestion(question);
+    };
+    node.querySelector(".dismiss").onclick = () => {
+      node.remove();
+      if (!thread.children.length) newChat.classList.add("hidden");
+    };
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function startNewConversation() {
+    if (conversation.length && !window.confirm(t("confirmNew"))) return;
+    conversation.length = 0;
+    thread.replaceChildren();
+    newChat.classList.add("hidden");
+    stopSpeaking();
+    clearError();
+    updatePrompt();
+  }
+  newChat.addEventListener("click", startNewConversation);
+
+  async function askQuestion(question) {
+    if (busy) return;
+    busy = true;
+    mic.disabled = true;
+    typeSubmit.disabled = true;
+    clearError();
+    const node = newTurn(question);
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+    const stepTimer = startSteps(node);
+    setPrompt(t("checking"), t("checkingSub"));
+
+    // Send only the last few answered turns, so the request stays small and quick.
+    const history = conversation.slice(-MAX_HISTORY).map(({ question: q, answer }) => ({ question: q, answer }));
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45000);
     try {
       const response = await fetch("/advise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          question,
+          place: document.getElementById("place").value.trim(),
+          state: document.getElementById("state").value.trim(),
+          crop: document.getElementById("crop").value.trim(),
+          history,
+          ...(coords || {}),
+        }),
+        signal: controller.signal,
       });
       const data = await response.json();
       if (!response.ok) {
         const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join(" ") : data.detail;
-        showError(detail || "Something went wrong. Please try again.");
+        showFailed(node, detail || t("generic"));
         return;
       }
-      document.getElementById("advice").textContent = data.advice;
-      const warnings = document.getElementById("warnings");
-      warnings.replaceChildren(...data.warnings.map((text) => {
-        const p = document.createElement("p");
-        p.className = "warn";
-        p.textContent = text;
-        return p;
-      }));
-      document.getElementById("trace").textContent = JSON.stringify(data.trace, null, 2);
-      result.style.display = "block";
+      conversation.push({ question, answer: data.advice });
+      const spoken = fillAnswer(node, question, data);
+      node.dataset.state = "done";
+      speak(spoken); // voice first: read the decision and today's line aloud
+      node.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
-      showError("Could not reach the server. Check your connection and try again.");
+      showFailed(node, error.name === "AbortError" ? t("timeout") : t("network"));
     } finally {
-      submit.disabled = false;
-      submit.textContent = "Get advice";
+      clearTimeout(timer);
+      clearInterval(stepTimer);
+      busy = false;
+      mic.disabled = false;
+      typeSubmit.disabled = false;
+      updatePrompt();
     }
-  });
+  }
+
+  applyLanguage("en");
 </script>
 </body>
 </html>

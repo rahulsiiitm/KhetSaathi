@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KhetSaathi</title>
+  <style>
+    :root { --green: #2f6b3a; --bg: #f5f7f2; --card: #ffffff; --text: #1d2a1f; --muted: #5d6b5f; --warn: #8a5a00; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    main { max-width: 640px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.6rem; margin: 8px 0 4px; color: var(--green); }
+    p.sub { margin: 0 0 16px; color: var(--muted); }
+    form, .result { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    label { display: block; font-weight: 600; margin: 12px 0 4px; }
+    input, select, textarea { width: 100%; font: inherit; padding: 10px; border: 1px solid #c9d2c4; border-radius: 8px; }
+    textarea { min-height: 80px; resize: vertical; }
+    button { margin-top: 16px; width: 100%; padding: 12px; font: inherit; font-weight: 600; color: #fff; background: var(--green); border: 0; border-radius: 8px; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .result { margin-top: 16px; display: none; }
+    .advice { white-space: pre-wrap; line-height: 1.5; }
+    .warn { color: var(--warn); margin: 8px 0; }
+    .error { color: #a12626; margin-top: 12px; display: none; }
+    details { margin-top: 12px; }
+    pre { white-space: pre-wrap; font-size: .85rem; background: #f0f3ee; padding: 8px; border-radius: 6px; overflow-x: auto; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --bg: #141a15; --card: #1d251f; --text: #e6efe7; --muted: #a6b5a8; --green: #7fbf8a; --warn: #e0b35c; }
+    }
+    :root[data-theme="dark"] { --bg: #141a15; --card: #1d251f; --text: #e6efe7; --muted: #a6b5a8; --green: #7fbf8a; --warn: #e0b35c; }
+    body { background: var(--bg); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>KhetSaathi</h1>
+  <p class="sub">Live weather and mandi prices, with advice you can check. Ask in Hindi or English.</p>
+
+  <form id="advice-form">
+    <label for="question">Your question</label>
+    <textarea id="question" required minlength="3" maxlength="500" placeholder="e.g. Should I spray my potato crop this week?"></textarea>
+
+    <label for="place">Village or town</label>
+    <input id="place" required minlength="2" maxlength="80" placeholder="e.g. Ludhiana">
+
+    <label for="state">State</label>
+    <input id="state" required minlength="2" maxlength="60" placeholder="e.g. Punjab">
+
+    <label for="crop">Crop</label>
+    <select id="crop" required>
+      <option value="Potato">Potato</option>
+      <option value="Tomato">Tomato</option>
+      <option value="Onion">Onion</option>
+      <option value="Cauliflower">Cauliflower</option>
+      <option value="Paddy(Common)">Paddy (common)</option>
+    </select>
+
+    <button id="submit" type="submit">Get advice</button>
+    <p id="error" class="error" role="alert"></p>
+  </form>
+
+  <section id="result" class="result" aria-live="polite">
+    <h2>Advice</h2>
+    <div id="advice" class="advice"></div>
+    <div id="warnings"></div>
+    <details>
+      <summary>How this was worked out</summary>
+      <pre id="trace"></pre>
+    </details>
+  </section>
+</main>
+
+<script>
+  const form = document.getElementById("advice-form");
+  const submit = document.getElementById("submit");
+  const errorBox = document.getElementById("error");
+  const result = document.getElementById("result");
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.style.display = "block";
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorBox.style.display = "none";
+    result.style.display = "none";
+    submit.disabled = true;
+    submit.textContent = "Checking live data...";
+
+    const body = {
+      question: document.getElementById("question").value,
+      place: document.getElementById("place").value,
+      state: document.getElementById("state").value,
+      crop: document.getElementById("crop").value,
+    };
+
+    try {
+      const response = await fetch("/advise", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join(" ") : data.detail;
+        showError(detail || "Something went wrong. Please try again.");
+        return;
+      }
+      document.getElementById("advice").textContent = data.advice;
+      const warnings = document.getElementById("warnings");
+      warnings.replaceChildren(...data.warnings.map((text) => {
+        const p = document.createElement("p");
+        p.className = "warn";
+        p.textContent = text;
+        return p;
+      }));
+      document.getElementById("trace").textContent = JSON.stringify(data.trace, null, 2);
+      result.style.display = "block";
+    } catch (error) {
+      showError("Could not reach the server. Check your connection and try again.");
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Get advice";
+    }
+  });
+</script>
+</body>
+</html>
